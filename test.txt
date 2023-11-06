@@ -1,4 +1,4 @@
 add feature 1
-add feature 2
+feature 2 -> feature 12
 add feature 3
 add feature 4
