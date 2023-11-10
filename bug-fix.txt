@@ -1,3 +1,0 @@
-buf fix 1
-buf fix 2
-buf fix 3
