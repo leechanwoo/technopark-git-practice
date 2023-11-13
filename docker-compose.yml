@@ -4,6 +4,9 @@ services:
   api-server: 
     image: cjswosa22/api-server:1.0.0
 
+    ports: 
+      - 5000:5000
+
     volumes: 
       - ./api-server:/home/ubuntu/api-server
 
