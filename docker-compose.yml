@@ -1,8 +1,17 @@
 version: "3" 
 
 services: 
+  api-server: 
+    image: cjswosa22/api-server:1.0.0
+
+    volumes: 
+      - ./api-server:/home/ubuntu/api-server
+
+    working_dir: /home/ubuntu/api-server
+
+
   web-server:
-    image: cjswosa22/web-server:0.0.1
+    image: cjswosa22/web-server:1.0.0
 
     volumes: 
       - ./web-server/html:/usr/share/nginx/html
@@ -14,6 +23,3 @@ services:
     ports: 
       - 8080:80
       - 8081:5000
-
-    build: 
-      dockerfile: ./dockerfiles/web-server.Dockerfile
