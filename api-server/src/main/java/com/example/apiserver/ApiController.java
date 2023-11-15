@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.apiserver.model.ResultJson;
+import com.example.apiserver.model.ImageJson;
 
 
 @RestController 
@@ -35,9 +36,12 @@ public class ApiController {
     }
     
     @ResponseStatus(HttpStatus.OK)
-    @PostMapping("/hello")
-    public ResultJson helloHandler(@RequestBody String body) {
-
-        return new ResultJson("message from server");
+    @PostMapping("/inference")
+    public ResultJson helloHandler(@RequestBody ImageJson body) {
+        String response = String.format("Image shape: (%d, %d, %d)", 
+                                        body.width(), 
+                                        body.height(),
+                                        body.channel());
+        return new ResultJson(response);
     }
 }
