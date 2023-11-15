@@ -8,6 +8,23 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+protobuf {
+  protoc {
+    artifact = "com.google.protobuf:protoc:3.22.3"
+  }
+  plugins {
+    grpc {
+      artifact = 'io.grpc:protoc-gen-grpc-java:1.59.0'
+    }
+  }
+  generateProtoTasks {
+    all()*.plugins {
+      grpc {}
+    }
+  }
 }
 
 repositories {
@@ -23,6 +40,12 @@ dependencies {
 
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:32.1.1-jre'
+
+    // for grpc 
+    runtimeOnly 'io.grpc:grpc-netty-shaded:1.59.0'
+    implementation 'io.grpc:grpc-protobuf:1.59.0'
+    implementation 'io.grpc:grpc-stub:1.59.0'
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -40,4 +63,27 @@ application {
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+sourceSets {
+  main {
+    proto {
+      // In addition to the default 'src/main/proto'
+      srcDir 'src/main/protobuf'
+      srcDir 'src/main/protocolbuffers'
+      // In addition to the default '**/*.proto' (use with caution).
+      // Using an extension other than 'proto' is NOT recommended,
+      // because when proto files are published along with class files, we can
+      // only tell the type of a file from its extension.
+      include '**/*.protodevel'
+    }
+    java {
+    }
+  }
+  test {
+    proto {
+      // In addition to the default 'src/test/proto'
+      srcDir 'src/test/protocolbuffers'
+    }
+  }
 }
