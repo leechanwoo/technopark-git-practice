@@ -3,12 +3,50 @@
  */
 package inference.server;
 
+
+import io.grpc.Grpc;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import io.grpc.InsecureServerCredentials;
+
+import com.example.Inference;
+import com.example.TestServiceGrpc;
+import com.example.Inference.ImageData;
+import com.example.Inference.TestResult;
+
+
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
+    public Server serverBuilder() {
+        Server server = Grpc.newServerBuilderForPort(
+            50051, InsecureServerCredentials.create())
+            .addService(new TestServiceImpl())
+            .build();
+        
+        return server;
     }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        Server server = new App().serverBuilder();
+        
+        try {
+            server.start();
+            System.out.println("Server started and listening on port 50051");
+            server.awaitTermination();
+        } catch (Exception e) { 
+            e.printStackTrace();
+        }
+    }
+
+    static class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
+        @Override
+        public void test(ImageData image, io.grpc.stub.StreamObserver<TestResult> responseObserver) {
+            String message = String.format("[From gRPC] Image shape: (%d, %d, %d)", image.getWidth(), image.getHeight(),
+                    image.getChannel());
+            TestResult response = TestResult.newBuilder().setResult(message).build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        }
     }
 }
+
