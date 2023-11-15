@@ -1,6 +1,16 @@
 version: "3" 
 
 services: 
+  inference-server: 
+    image: cjswosa22/inference-server:1.0.0
+    ports: 
+      - 50051:50051 
+    
+    volumes: 
+      - ./inference-server:/home/ubuntu/inference-server
+      
+    working_dir: /home/ubuntu/inference-server
+
   api-server: 
     image: cjswosa22/api-server:1.0.0
 
