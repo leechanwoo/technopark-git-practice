@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package com.example; 
+
+service InferenceService { 
+    rpc Inference (ImageData) returns (CategoricalResult);
+}
+
+service TestService { 
+    rpc Test (ImageData) returns (TestResult);
+}
+
+message ImageData {
+    string image = 1;
+    int32 width = 2;
+    int32 height = 3;
+    int32 channel = 4;
+}
+
+message CategoricalResult {
+    repeated float result = 1;
+}
+
+message TestResult {
+    string result = 1;
+}
