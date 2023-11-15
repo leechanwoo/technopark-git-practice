@@ -22,8 +22,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.apiserver.model.ResultJson;
 
+
 @RestController 
 @RequestMapping("/api")
+@CrossOrigin(origins="*")
 public class ApiController {
 
     private final ApiRepository repository;
@@ -35,7 +37,6 @@ public class ApiController {
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/hello")
     public ResultJson helloHandler(@RequestBody String body) {
-        System.out.println("request recieved!");
 
         return new ResultJson("message from server");
     }

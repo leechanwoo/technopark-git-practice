@@ -16,3 +16,5 @@ RUN source "$HOME/.sdkman/bin/sdkman-init.sh" \
 
 ENV JAVA_HOME=/root/.sdkman/candidates/java/current
 ENV PATH="$PATH:/root/.sdkman/candidates/gradle/current/bin"
+
+CMD ["gradle", "bootRun"]
