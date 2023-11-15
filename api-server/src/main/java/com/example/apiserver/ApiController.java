@@ -35,7 +35,7 @@ public class ApiController {
     }
     
     @ResponseStatus(HttpStatus.OK)
-    @PostMapping("/hello")
+    @PostMapping("/inference")
     public ResultJson helloHandler(@RequestBody String body) {
 
         return new ResultJson("message from server");
