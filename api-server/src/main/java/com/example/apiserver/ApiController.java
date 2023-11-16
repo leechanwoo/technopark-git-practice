@@ -35,7 +35,8 @@ import io.grpc.stub.StreamObserver;
 
 import com.example.Inference;
 import com.example.TestServiceGrpc;
-import com.example.Inference.TestServiceBlockingStub;
+// resolved: add import for TestServiceBlockingStub
+import com.example.TestServiceGrpc.TestServiceBlockingStub;
 import com.example.Inference.ImageData;
 import com.example.Inference.TestResult;
 
@@ -56,8 +57,9 @@ public class ApiController {
         this.repository = repository;
 
         this.target = "inference-server:50051";
-        this.channel = Grpc.newChannelBuilder(target, 
-                    InsecureChannelCredentials.create());
+        this.channel = Grpc
+            .newChannelBuilder(target, InsecureChannelCredentials.create())
+            .build(); // resolved : build() added
         this.client = new TestClient(channel);
     }
     
