@@ -24,6 +24,23 @@ import com.example.apiserver.model.ResultJson;
 import com.example.apiserver.model.ImageJson;
 
 
+import io.grpc.Grpc; 
+import io.grpc.InsecureChannelCredentials;
+import io.grpc.Channel;
+import io.grpc.StatusRuntimeException;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+
+import com.example.Inference;
+import com.example.TestServiceGrpc;
+import com.example.Inference.TestServiceBlockingStub;
+import com.example.Inference.ImageData;
+import com.example.Inference.TestResult;
+
+
+
 @RestController 
 @RequestMapping("/api")
 @CrossOrigin(origins="*")
@@ -31,8 +48,17 @@ public class ApiController {
 
     private final ApiRepository repository;
 
+    private final TestClient client;
+    private final String target; 
+    private final ManagedChannel channel;
+
     public ApiController(ApiRepository repository) {
         this.repository = repository;
+
+        this.target = "inference-server:50051";
+        this.channel = Grpc.newChannelBuilder(target, 
+                    InsecureChannelCredentials.create());
+        this.client = new TestClient(channel);
     }
     
     @ResponseStatus(HttpStatus.OK)
@@ -43,5 +69,19 @@ public class ApiController {
                                         body.height(),
                                         body.channel());
         return new ResultJson(response);
+    }
+}
+
+
+
+class TestClient { 
+    private final TestServiceBlockingStub blockingStub; 
+
+    public TestClient(Channel channel) {
+        blockingStub = TestServiceGrpc.newBlockingStub(channel);
+    }
+
+    public String test(ImageJson image) {
+        return String.format("Grpc response");
     }
 }
