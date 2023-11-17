@@ -6,10 +6,79 @@ package inference.server;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+
+import ai.onnxruntime.NodeInfo;
+import ai.onnxruntime.TensorInfo;
+import ai.onnxruntime.OnnxTensor;
+import ai.onnxruntime.OrtEnvironment;
+import ai.onnxruntime.OrtException;
+import ai.onnxruntime.OrtSession;
+import ai.onnxruntime.OrtSession.Result;
+import ai.onnxruntime.OrtSession.SessionOptions;
+import ai.onnxruntime.OrtSession.SessionOptions.OptLevel;
+import ai.onnxruntime.OrtProvider;
+
 class AppTest {
+    @Test void InferenceTest() throws IOException, OrtException {
+        String resource_path = System.getenv("RESOURCES_PATH");
+        BufferedImage image = readImage(resource_path + "/tokkis.jpg");
+        String base64 = imageToBase64(image);
+
+        ImageClassifier img_clfr = new ImageClassifier();
+        img_clfr.base64ToImage(base64); 
+        assertNotNull(img_clfr.getDecodedImage()); // Test 7
+
+        img_clfr.bufferToFloatImage();
+        for (float pixel : img_clfr.getFloatImage()) {
+            assertTrue(pixel > -1, 
+                String.format("pixel value: %f", pixel)); // Test 8 
+        }
+        
+    }
+
+    @Test void modelSessionAndGetInputTensorTest() throws OrtException, IOException {
+        String onnx_path = System.getenv("RESOURCES_PATH");
+        ImageClassifier img_clfr = new ImageClassifier();
+        img_clfr.initModelSession(onnx_path + "/mobilenetv2.onnx");
+        assertNotNull(img_clfr.getModelSession());  // Test 5
+
+        long[] input_shape = img_clfr.getModelInputShape();
+        assertEquals(input_shape[0], 1); // Test 6
+        assertTrue(input_shape[1] > 0);
+        assertTrue(input_shape[2] > 0);
+        assertTrue(input_shape[3] > 0);
+    }
+    
+    @Test void preprocOrtSessionTest() throws OrtException, IOException {
+        String onnx_path = System.getenv("RESOURCES_PATH");
+        ImageClassifier img_clfr = new ImageClassifier();
+        img_clfr.initPProcSession(onnx_path + "/simple_image_preprocessor.onnx");
+        assertNotNull(img_clfr.getPProcSession());  // Test 4
+    }
+
+    @Test void loadImageTest() throws IOException { 
+        String resource_path = System.getenv("RESOURCES_PATH");
+        BufferedImage image = readImage(resource_path + "/tokkis.jpg");
+        assertNotNull(image); // Test 2
+
+        String base64 = imageToBase64(image);
+        assertNotNull(base64); // Test 3
+    }
 
     @Test void imageClassifierExists() {
-        assertNotNull(new ImageClassifier());
+        assertNotNull(new ImageClassifier()); // Test 1
     }
 
     @Test void appHasAGRPCBuilder() {
@@ -21,9 +90,103 @@ class AppTest {
         File imageFile = new File(image_path);
         return ImageIO.read(imageFile);
     }
-     
+
+    String imageToBase64(BufferedImage image) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", byteArrayOutputStream);
+        byte[] imageBytes = byteArrayOutputStream.toByteArray();
+        return Base64.getEncoder().encodeToString(imageBytes);
+    }
+
 }
 
 class ImageClassifier {
+    private OrtSession pproc_sess;
+    private OrtSession model_sess;
+    private BufferedImage decoded_image;
+    private float[] float_image;
+
     public ImageClassifier() { }
+
+    public BufferedImage getDecodedImage() {
+        return decoded_image;
+    }
+
+    public float[] getFloatImage() {
+        return float_image;
+    }
+
+    public OrtSession getPProcSession() {
+        return pproc_sess;
+    }
+    public OrtSession getModelSession() {
+        return model_sess;
+    }
+
+    public void initModelSession(String path) {
+        try {
+            model_sess = initSession(path);
+        } catch (Exception e) {
+            System.out.println(e);
+            model_sess = null;
+        }
+    }
+
+    public void initPProcSession(String path) {
+        try {
+            pproc_sess = initSession(path);
+        } catch (Exception e) {
+            System.out.println(e);
+            pproc_sess = null;
+        }
+    }
+    
+    public void bufferToFloatImage() throws IOException {
+        int width = decoded_image.getWidth();
+        int height = decoded_image.getHeight();
+
+        float_image = new float[width * height * 3];
+        for (int i = 0; i < float_image.length; i++) {
+            float_image[i] = -1;
+        }
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgb = decoded_image.getRGB(x, y);
+                int r = (rgb >> 16) & 0xFF;
+                int g = (rgb >> 8) & 0xFF;
+                int b = rgb & 0xFF;
+                
+                float_image[y*width + x] = (float)r;
+                float_image[width*height + y*width + x] = (float)g; 
+                float_image[2*width*height + y*width + x] = (float)b; 
+            }
+        }
+    }
+
+    public void base64ToImage(String base64) throws IOException {
+        Decoder decoder = Base64.getDecoder();
+        byte[] decodedBytes = decoder.decode(base64);
+        ByteArrayInputStream decodedByteImage = new ByteArrayInputStream(decodedBytes);
+        decoded_image = ImageIO.read(decodedByteImage);
+    }
+
+    public long[] getModelInputShape() throws OrtException { 
+        String inputName = model_sess.getInputNames().iterator().next();
+        TensorInfo inputTensorInfo = (TensorInfo)model_sess
+                                        .getInputInfo()
+                                        .get(inputName)
+                                        .getInfo();
+        long[] input_shape = inputTensorInfo.getShape();
+        input_shape[0] = 1;
+        return input_shape;
+    }
+
+    private OrtSession initSession(String path) throws OrtException, IOException {
+        OrtEnvironment env = OrtEnvironment.getEnvironment();
+        OrtSession.SessionOptions opts = new SessionOptions();
+        opts.setOptimizationLevel(OptLevel.BASIC_OPT);
+        return env.createSession(path, opts);
+    }
+    
 }
