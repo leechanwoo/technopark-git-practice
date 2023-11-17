@@ -46,6 +46,12 @@ dependencies {
     implementation 'io.grpc:grpc-protobuf:1.59.0'
     implementation 'io.grpc:grpc-stub:1.59.0'
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
+
+    // for onnxruntime 
+    implementation group: 'com.microsoft.onnxruntime', name: 'onnxruntime_gpu', version: '1.16.0-rc1'
+
+    // for image io 
+    implementation group: 'com.github.jai-imageio', name: 'jai-imageio-core', version: '1.4.0'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

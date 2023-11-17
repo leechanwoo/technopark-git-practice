@@ -7,8 +7,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AppTest {
+
+    @Test void imageClassifierExists() {
+        assertNotNull(new ImageClassifier());
+    }
+
     @Test void appHasAGRPCBuilder() {
         App classUnderTest = new App();
         assertNotNull(classUnderTest.serverBuilder(), "app should have a GRPC builder");
     }
+
+    BufferedImage readImage(String image_path) throws IOException {
+        File imageFile = new File(image_path);
+        return ImageIO.read(imageFile);
+    }
+     
+}
+
+class ImageClassifier {
+    public ImageClassifier() { }
 }
