@@ -66,11 +66,13 @@ public class ApiController {
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/inference")
     public ResultJson helloHandler(@RequestBody ImageJson body) {
-        String response = String.format("Image shape: (%d, %d, %d)", 
-                                        body.width(), 
-                                        body.height(),
-                                        body.channel());
-        return new ResultJson(response);
+        try {
+            String response = client.test(body);
+            return new ResultJson(response);
+        } catch (StatusRuntimeException e) {
+            System.out.println("error: " + e);
+            return new ResultJson(String.format("Error from gRPC Client: %s", e));
+        }
     }
 }
 
@@ -83,7 +85,16 @@ class TestClient {
         blockingStub = TestServiceGrpc.newBlockingStub(channel);
     }
 
-    public String test(ImageJson image) {
-        return String.format("Grpc response");
+    public String test(ImageJson image) throws StatusRuntimeException {
+        ImageData request = ImageData
+                        .newBuilder()
+                        .setImage(image.image())
+                        .setWidth(image.width())
+                        .setChannel(image.channel())
+                        .build();
+        TestResult response;
+        
+        response = blockingStub.test(request);
+        return response.getResult();
     }
 }
