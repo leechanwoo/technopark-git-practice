@@ -14,9 +14,11 @@ import com.example.TestServiceGrpc;
 import com.example.Inference.ImageData;
 import com.example.Inference.TestResult;
 
+import inference.server.ImageClassifier;
 
 public class App {
     public Server serverBuilder() {
+        ImageClassifier imageClassifier = imageClassifierBuilder(); 
         Server server = Grpc.newServerBuilderForPort(
             50051, InsecureServerCredentials.create())
             .addService(new TestServiceImpl())
@@ -36,6 +38,60 @@ public class App {
             e.printStackTrace();
         }
     }
+
+    public static ImageClassifier imageClassifierBuilder() {
+        ImageClassifier img_clfr = new ImageClassifier();
+        String resources_path = System.getenv("RESOURCES_PATH");
+
+        try {
+            img_clfr.initPProcSession(resources_path +  "/simple_image_preprocessor.onnx");
+            img_clfr.initModelSession(resources_path + "/mobilenetv2.onnx");
+        } catch (Exception e) {
+            System.out.println(String.format("ONNX Runtime exception: %s", e));
+        }
+
+        return img_clfr;
+    }
+
+
+
+    static class InferenceServiceImpl extends InferenceServiceGrpc.InferenceServiceImplBase {
+        private ImageClassifier imageClassifier;
+
+        public InferenceServiceImpl(ImageClassifier imageClassifier) {
+            this.imageClassifier = imageClassifier;
+        }
+
+        @Override
+        public void inference(ImageData image, 
+                io.grpc.stub.StreamObserver<CategoricalResult> responseObserver) {
+
+            try {
+                imageClassifier.base64ToImage(image.getImage());
+                imageClassifier.bufferToFloatImage();
+                imageClassifier.makeInputArgs();
+                float[][][][] preprocessed_img = imageClassifier.forward_pass_preprocessing();
+                float[][] result = imageClassifier.forward_pass_neuralnet(preprocessed_img);
+
+                CategoricalResult.Builder resultBuilder = CategoricalResult.newBuilder();
+                for (int i = 0; i < result[0].length; i++) {
+                    resultBuilder.setResult(i, result[0][i]);
+                }
+                CategoricalResult response = resultBuilder.build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            } catch (OrtException e) {
+                System.out.println(String.format("ONNX Runtime exception in RPC: %s", e));
+            } catch (IOException e) {
+                System.out.println(String.format("IO Exeption in RPC: %s", e));
+            } finally {
+                System.out.println("Error occure");
+            }
+        }
+    }
+
+
 
     static class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         @Override
