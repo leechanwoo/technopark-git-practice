@@ -34,11 +34,15 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import com.example.Inference;
-import com.example.TestServiceGrpc;
-// resolved: add import for TestServiceBlockingStub
-import com.example.TestServiceGrpc.TestServiceBlockingStub;
 import com.example.Inference.ImageData;
+import com.example.InferenceServiceGrpc;
+import com.example.InferenceServiceGrpc.InferenceServiceBlockingStub;
+import com.example.Inference.CategoricalResult;
+
+import com.example.TestServiceGrpc;
+import com.example.TestServiceGrpc.TestServiceBlockingStub;
 import com.example.Inference.TestResult;
+
 
 
 
@@ -49,7 +53,8 @@ public class ApiController {
 
     private final ApiRepository repository;
 
-    private final TestClient client;
+    private final InferenceClient client;
+
     private final String target; 
     private final ManagedChannel channel;
 
@@ -60,15 +65,15 @@ public class ApiController {
         this.channel = Grpc
             .newChannelBuilder(target, InsecureChannelCredentials.create())
             .build(); // resolved : build() added
-        this.client = new TestClient(channel);
+        this.client = new InferenceClient(channel);
     }
     
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/inference")
-    public ResultJson helloHandler(@RequestBody ImageJson body) {
+    public ResultJson inferenceHandler(@RequestBody ImageJson body) {
         try {
-            String response = client.test(body);
-            return new ResultJson(response);
+            List<java.lang.Float> response = client.inference(body);
+            return new ResultJson(repository.stringify(response));
         } catch (StatusRuntimeException e) {
             System.out.println("error: " + e);
             return new ResultJson(String.format("Error from gRPC Client: %s", e));
@@ -76,6 +81,27 @@ public class ApiController {
     }
 }
 
+class InferenceClient { 
+    private final InferenceServiceBlockingStub blockingStub; 
+
+    public InferenceClient(Channel channel) {
+        blockingStub = InferenceServiceGrpc.newBlockingStub(channel);
+    }
+
+    public List<java.lang.Float> inference(ImageJson image) throws StatusRuntimeException {
+        String base64 = image.image().split(",")[1];
+        ImageData request = ImageData
+                        .newBuilder()
+                        .setImage(base64)
+                        .setWidth(image.width())
+                        .setChannel(image.channel())
+                        .build();
+        CategoricalResult response;
+        
+        response = blockingStub.inference(request);
+        return response.getResultList();
+    }
+}
 
 
 class TestClient { 

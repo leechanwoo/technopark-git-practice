@@ -8,20 +8,27 @@ import io.grpc.Grpc;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.InsecureServerCredentials;
+import java.io.IOException;
 
 import com.example.Inference;
 import com.example.TestServiceGrpc;
 import com.example.Inference.ImageData;
 import com.example.Inference.TestResult;
 
+
+import com.example.InferenceServiceGrpc;
+import com.example.Inference.CategoricalResult;
+
+import ai.onnxruntime.OrtException;
 import inference.server.ImageClassifier;
+
 
 public class App {
     public Server serverBuilder() {
         ImageClassifier imageClassifier = imageClassifierBuilder(); 
         Server server = Grpc.newServerBuilderForPort(
             50051, InsecureServerCredentials.create())
-            .addService(new TestServiceImpl())
+            .addService(new InferenceServiceImpl(imageClassifier)) // 주입 
             .build();
         
         return server;
