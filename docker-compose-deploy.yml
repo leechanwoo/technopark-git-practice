@@ -1,0 +1,38 @@
+version: "3" 
+
+services: 
+  inference-server: 
+    image: cjswosa22/inference-server:1.0.0
+    ports: 
+      - 50051:50051 
+    
+    volumes: 
+      - ./inference-server:/home/ubuntu/inference-server
+      
+    working_dir: /home/ubuntu/inference-server
+
+  api-server: 
+    image: cjswosa22/api-server:1.0.0
+
+    ports: 
+      - 5000:5000
+
+    volumes: 
+      - ./api-server:/home/ubuntu/api-server
+
+    working_dir: /home/ubuntu/api-server
+
+
+  web-server:
+    image: cjswosa22/web-server:1.0.0
+
+    volumes: 
+      - ./web-server/html:/usr/share/nginx/html
+      - ./web-server/nginx:/etc/nginx
+
+    environment: 
+      - NGINX_HOST=0.0.0.0 
+      - NGINX_PORT=80 
+    ports: 
+      - 8080:80
+      - 8081:5000

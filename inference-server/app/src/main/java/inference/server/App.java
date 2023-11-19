@@ -81,8 +81,8 @@ public class App {
                 float[][] result = imageClassifier.forward_pass_neuralnet(preprocessed_img);
 
                 CategoricalResult.Builder resultBuilder = CategoricalResult.newBuilder();
-                for (int i = 0; i < result[0].length; i++) {
-                    resultBuilder.setResult(i, result[0][i]);
+                for(float r: result[0]) {
+                    resultBuilder.addResult(r);
                 }
                 CategoricalResult response = resultBuilder.build();
 

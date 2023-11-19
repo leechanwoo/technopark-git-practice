@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  terraform: 
+    image: hashicorp/terraform
+    volumes:
+      - ./:/root
+    
+    build: 
+      dockerfile: ../dockerfiles/terraform.Dockerfile
+
+    env_file:
+      - .env
