@@ -101,10 +101,10 @@ class InferenceClient {
     }
 
     public List<java.lang.Float> inference(ImageJson image) throws StatusRuntimeException {
-        // Error 예정 
+        String base64 = image.image().split(",")[1];
         ImageData request = ImageData
                         .newBuilder()
-                        .setImage(image.image())
+                        .setImage(base64)
                         .setWidth(image.width())
                         .setChannel(image.channel())
                         .build();
