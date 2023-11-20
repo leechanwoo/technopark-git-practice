@@ -8,21 +8,43 @@ import io.grpc.Grpc;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.InsecureServerCredentials;
+import java.io.IOException; // 추가
 
 import com.example.Inference;
 import com.example.TestServiceGrpc;
+import com.example.InferenceServiceGrpc; // 추가 
 import com.example.Inference.ImageData;
-import com.example.Inference.TestResult;
+import com.example.Inference.TestResult; 
+import com.example.Inference.CategoricalResult; // 추가 
+
+import ai.onnxruntime.OrtException; // 추가 
+import inference.server.ImageClassifier; // 추가 
 
 
 public class App {
     public Server serverBuilder() {
+        ImageClassifier imageClassifier = imageClassifierBuilder();
         Server server = Grpc.newServerBuilderForPort(
             50051, InsecureServerCredentials.create())
             .addService(new TestServiceImpl())
+            .addService(new InferenceServiceImpl(imageClassifier))
             .build();
         
         return server;
+    }
+    
+    public static ImageClassifier imageClassifierBuilder() {
+        // Initializing
+        String resource_path = System.getenv("RESOURCES_PATH");
+        ImageClassifier img_clfr = new ImageClassifier();
+        try { 
+            img_clfr.initModelSession(resource_path + "/mobilenetv2.onnx");
+            img_clfr.initPProcSession(resource_path + "/simple_image_preprocessor.onnx");
+        } catch (Exception e) {
+            System.out.println(String.format("Exception in ImageClassifierBuilder: %s", e));
+        }
+
+        return img_clfr;
     }
 
     public static void main(String[] args) {
@@ -34,6 +56,43 @@ public class App {
             server.awaitTermination();
         } catch (Exception e) { 
             e.printStackTrace();
+        }
+    }
+    static class InferenceServiceImpl extends InferenceServiceGrpc.InferenceServiceImplBase {
+
+        private ImageClassifier img_clfr; 
+        
+        public InferenceServiceImpl(ImageClassifier imageClassifier) {
+            this.img_clfr = imageClassifier;
+        }
+
+        @Override
+        public void inference(ImageData image, 
+                io.grpc.stub.StreamObserver<CategoricalResult> responseObserver) {
+
+            try { 
+                img_clfr.base64ToImage(image.getImage());
+                img_clfr.bufferToFloatImage();
+                img_clfr.makeInputArgs();
+                float[][][][] preprocessed_img = img_clfr.forward_pass_preprocessing();
+                float[][] result = img_clfr.forward_pass_neuralnet(preprocessed_img);
+
+                CategoricalResult.Builder resultBuilder = CategoricalResult.newBuilder();
+                for (float r : result[0]) {
+                    resultBuilder.addResult(r);
+                }
+                CategoricalResult response = resultBuilder.build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+
+            } catch (OrtException e) {
+                System.out.println(String.format("ONNX Runtime Exception in RPC: %s", e));
+            } catch (IOException e) {
+                System.out.println(String.format("IO Exception in RPC: %s", e));
+            } finally {
+                System.out.println("Something went wrong in RPC");
+            }
         }
     }
 
