@@ -36,7 +36,17 @@ class AppTest {
         BufferedImage image = readImage(resource_path + "/tokkis.jpg");
         String base64 = imageToBase64(image);
 
+        // Initializing
         ImageClassifier img_clfr = new ImageClassifier();
+
+        img_clfr.initModelSession(resource_path + "/mobilenetv2.onnx");
+        assertNotNull(img_clfr.getModelSession()); 
+
+        img_clfr.initPProcSession(resource_path + "/simple_image_preprocessor.onnx");
+        assertNotNull(img_clfr.getPProcSession()); 
+
+
+        // Image input 
         img_clfr.base64ToImage(base64); 
         assertNotNull(img_clfr.getDecodedImage()); // Test 7
 
@@ -45,7 +55,18 @@ class AppTest {
             assertTrue(pixel > -1, 
                 String.format("pixel value: %f", pixel)); // Test 8 
         }
-        
+
+        img_clfr.makeInputArgs();
+        assertNotNull(img_clfr.getInputArgs()); // Test 9 
+
+
+        float[][][][] preprocessed_img = img_clfr.forward_pass_preprocessing();
+        assertNotNull(preprocessed_img); // Test 10
+
+
+        float[][] result = img_clfr.forward_pass_neuralnet(preprocessed_img);
+        assertNotNull(result);
+        assertEquals(result[0].length, 1000); // Test 11
     }
 
     @Test void modelSessionAndGetInputTensorTest() throws OrtException, IOException {
@@ -105,8 +126,17 @@ class ImageClassifier {
     private OrtSession model_sess;
     private BufferedImage decoded_image;
     private float[] float_image;
+    private OrtEnvironment env; 
+    private Map<String, OnnxTensor> input_args; 
 
-    public ImageClassifier() { }
+    public ImageClassifier() { 
+        this.env = OrtEnvironment.getEnvironment();
+        this.input_args = new HashMap();
+    }
+
+    public Map<String, OnnxTensor> getInputArgs() {
+        return input_args;
+    }
 
     public BufferedImage getDecodedImage() {
         return decoded_image;
@@ -140,7 +170,36 @@ class ImageClassifier {
             pproc_sess = null;
         }
     }
+
+    public float[][] forward_pass_neuralnet(float[][][][] pproc_image) throws OrtException {
+        OnnxTensor inputTensor = OnnxTensor.createTensor(env, pproc_image);
+        String inputName = model_sess.getInputNames().iterator().next();
+        Result outputs = model_sess.run(Collections.singletonMap(inputName, inputTensor));
+        return (float[][])outputs.get(0).getValue();
+    }
     
+    public float[][][][] forward_pass_preprocessing() throws OrtException {
+        Result pproc_result = pproc_sess.run(input_args);
+        return (float[][][][])pproc_result.get(0).getValue();
+    }
+
+
+    public void makeInputArgs() throws OrtException {
+        long[] input_shape = getModelInputShape();
+        long[] org_shape = { 1, 3, 
+            decoded_image.getWidth(), 
+            decoded_image.getHeight()
+        };
+
+        OnnxTensor data_tensor = OnnxTensor.createTensor(env, float_image);
+        OnnxTensor org_shape_tensor = OnnxTensor.createTensor(env, (Object)org_shape);
+        OnnxTensor input_shape_tensor = OnnxTensor.createTensor(env, (Object)input_shape);
+        
+        input_args.put("RawImg", data_tensor);
+        input_args.put("shape", org_shape_tensor);
+        input_args.put("sizes", input_shape_tensor);
+    }
+
     public void bufferToFloatImage() throws IOException {
         int width = decoded_image.getWidth();
         int height = decoded_image.getHeight();
