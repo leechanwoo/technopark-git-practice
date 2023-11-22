@@ -5,6 +5,14 @@ services:
     image: cjswosa22/inference-server:1.0.0
     ports: 
       - 50051:50051 
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
     
     volumes: 
       - ./inference-server:/home/ubuntu/inference-server

@@ -149,6 +149,7 @@ class ImageClassifier {
         OrtEnvironment env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opts = new SessionOptions();
         opts.setOptimizationLevel(OptLevel.BASIC_OPT);
+        opts.addCUDA(0);
         return env.createSession(path, opts);
     }
     
