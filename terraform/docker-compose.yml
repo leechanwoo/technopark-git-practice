@@ -1,0 +1,14 @@
+version: "3" 
+
+services: 
+  terraform: 
+    image: terraform:local
+    volumes: 
+      - ./:/root
+    
+    build: 
+      dockerfile: ../dockerfiles/terraform.Dockerfile
+      
+
+    env_file: 
+      - .env
