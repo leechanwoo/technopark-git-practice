@@ -11,5 +11,8 @@ sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 # git clone
 sudo git clone -b deploy https://github.com/leechanwoo/technopark-git-practice.git
 
+
+cd /home/ec2-user/technopark-git-practice
+
 # service up 
 sudo docker compose up -d
